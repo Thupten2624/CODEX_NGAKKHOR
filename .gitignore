@@ -10,3 +10,5 @@ config/config.php
 
 # CI artifacts
 .ftp-deploy-sync-state.json
+
+CODEX_NGAKKHOR/

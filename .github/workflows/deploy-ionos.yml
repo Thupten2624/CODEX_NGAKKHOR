@@ -1,0 +1,117 @@
+name: Deploy IONOS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ionos-production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy To IONOS
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        env:
+          IONOS_FTP_SERVER: ${{ secrets.IONOS_FTP_SERVER }}
+          IONOS_FTP_PORT: ${{ secrets.IONOS_FTP_PORT }}
+          IONOS_FTP_USERNAME: ${{ secrets.IONOS_FTP_USERNAME }}
+          IONOS_FTP_PASSWORD: ${{ secrets.IONOS_FTP_PASSWORD }}
+          IONOS_FTP_SERVER_DIR: ${{ secrets.IONOS_FTP_SERVER_DIR }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          missing=0
+          for key in IONOS_FTP_SERVER IONOS_FTP_PORT IONOS_FTP_USERNAME IONOS_FTP_PASSWORD IONOS_FTP_SERVER_DIR DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::$key is missing in GitHub Secrets"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Build production config.php from GitHub Secrets
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          APP_SESSION_NAME: ${{ secrets.APP_SESSION_NAME }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          php -r '
+          $appBaseUrl = getenv("APP_BASE_URL");
+          if ($appBaseUrl === false) {
+              $appBaseUrl = "";
+          }
+
+          $sessionName = getenv("APP_SESSION_NAME");
+          if ($sessionName === false || $sessionName === "") {
+              $sessionName = "vajrayana_session";
+          }
+
+          $config = [
+              "app" => [
+                  "name" => "Vajrayana Path Tracker",
+                  "base_url" => $appBaseUrl,
+                  "debug" => false,
+              ],
+              "db" => [
+                  "host" => (string) getenv("DB_HOST"),
+                  "port" => (int) getenv("DB_PORT"),
+                  "database" => (string) getenv("DB_DATABASE"),
+                  "username" => (string) getenv("DB_USERNAME"),
+                  "password" => (string) getenv("DB_PASSWORD"),
+                  "charset" => "utf8mb4",
+              ],
+              "security" => [
+                  "session_name" => $sessionName,
+              ],
+          ];
+
+          $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($config, true) . ";\n";
+          file_put_contents("config/config.php", $content);
+          '
+
+      - name: Upload files via FTP/FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.IONOS_FTP_SERVER }}
+          port: ${{ secrets.IONOS_FTP_PORT }}
+          username: ${{ secrets.IONOS_FTP_USERNAME }}
+          password: ${{ secrets.IONOS_FTP_PASSWORD }}
+          server-dir: ${{ secrets.IONOS_FTP_SERVER_DIR }}
+          state-name: .ftp-deploy-sync-state.json
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.idea/**
+            **/.vscode/**
+            **/node_modules/**
+            **/.DS_Store
+            **/README.md

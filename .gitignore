@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Runtime / secrets
+config/config.php
+
+# CI artifacts
+.ftp-deploy-sync-state.json

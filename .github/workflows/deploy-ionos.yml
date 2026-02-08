@@ -99,6 +99,7 @@ jobs:
       - name: Upload files via FTP/FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
+          protocol: ftps
           server: ${{ secrets.IONOS_FTP_SERVER }}
           port: ${{ secrets.IONOS_FTP_PORT }}
           username: ${{ secrets.IONOS_FTP_USERNAME }}

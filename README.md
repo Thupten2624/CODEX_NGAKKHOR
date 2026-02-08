@@ -24,9 +24,7 @@ Incluye autenticación, registro de prácticas por etapa, asignación maestro-pr
    - Ejecuta `/database/schema.sql`.
 2. Configura credenciales:
    - Edita `/config/config.php`.
-3. Asegura el document root:
-   - Recomendado: apunta el dominio/subdominio a `/public`.
-4. Abre la app:
+3. Abre la app:
    - `https://tu-dominio/index.php?route=home`
 
 ## Configuración (`/config/config.php`)
@@ -35,8 +33,9 @@ Campos clave:
 - `app.base_url`
 
 ### `app.base_url`
-- Si tu dominio apunta directo a `/public`: usa `''` (vacío).
-- Si accedes con `/public/index.php`: usa `'/public'`.
+- Si la web está en la raíz del dominio: usa `''` (vacío).
+- Si la web está en subcarpeta (ejemplo `/codex_ngakkhor`): usa `'/codex_ngakkhor'`.
+- Si accedes obligatoriamente por `/public`: usa `'/public'`.
 
 `config/config.php` está ignorado en Git para evitar subir credenciales locales.
 
@@ -76,7 +75,7 @@ La app ya incluye workflow de GitHub Actions para desplegar automáticamente por
 Ruta: `Settings > Secrets and variables > Actions > New repository secret`
 
 Secrets obligatorios de IONOS:
-- `IONOS_FTP_SERVER` (ejemplo: `ftps://tu-host-ftp`)
+- `IONOS_FTP_SERVER` (solo host, ejemplo: `home123456.1and1-data.host`, sin `ftp://` ni `ftps://`)
 - `IONOS_FTP_PORT` (normalmente `21`)
 - `IONOS_FTP_USERNAME`
 - `IONOS_FTP_PASSWORD`
@@ -90,7 +89,7 @@ Secrets obligatorios de base de datos:
 - `DB_PASSWORD`
 
 Secrets opcionales:
-- `APP_BASE_URL` (`''` si dominio apunta a `/public`; `'/public'` si no)
+- `APP_BASE_URL` (`''` en raíz del dominio; `'/codex_ngakkhor'` si está en subcarpeta)
 - `APP_SESSION_NAME` (si no se define: `vajrayana_session`)
 
 ### 3) Primera puesta en marcha
@@ -98,8 +97,14 @@ Secrets opcionales:
 2. Importa `/database/schema.sql` desde phpMyAdmin.
 3. Haz push a `main`.
 4. Revisa que el workflow termine en verde.
-5. En IONOS, define el document root al directorio `/public` (recomendado).
-6. Abre `https://tu-dominio/index.php?route=home`.
+5. Abre `https://tu-dominio/index.php?route=home`.
+
+### Si IONOS no te deja cambiar el Document Root
+Usa este modo:
+1. `IONOS_FTP_SERVER_DIR`: carpeta raíz del dominio (normalmente `/` o `/htdocs/`).
+2. Deja `APP_BASE_URL` vacío (`''`) si el dominio carga desde esa raíz.
+3. Si desplegaste en subcarpeta (ejemplo `/codex_ngakkhor/`), pon `APP_BASE_URL=/codex_ngakkhor`.
+4. Este proyecto ya trae `index.php` y `.htaccess` en raíz para enrutar internamente a `public/`.
 
 ## Siguientes ampliaciones sugeridas
 - Auditoría de actividad y bitácora administrativa
